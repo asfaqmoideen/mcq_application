@@ -6,13 +6,14 @@ from fastapi import APIRouter, Depends, File, UploadFile
 from app.schemas.mcq_schemas import (
     MCQ,
     MCQCreate,
+    UserCreate,
     UserOutput,
     UserUpdate,
     UserUpdateOutput,
 )
 from app.services import McqUnitOfWork, UserUnitOfWork, mcq_services, user_services
 
-router = APIRouter(prefix="/quizify", tags=["Admin Routes"])
+router = APIRouter(tags=["Admin Routes"])
 
 
 @router.get("/users", response_model=List[UserOutput])
@@ -38,6 +39,23 @@ def get_one_user(
     unit_of_work = UserUnitOfWork()
     user = user_services.get(
         unit_of_work=unit_of_work, user_id=user_id, current_user=current_user
+    )
+    return user
+
+
+@router.post("/users", status_code=201)
+def add_user(
+    user_details: UserCreate,
+    current_user: UserOutput = Depends(user_services.get_current_user),
+):
+    """
+    add user
+    """
+    unit_of_work = UserUnitOfWork()
+    user = user_services.add_user(
+        unit_of_work=unit_of_work,
+        user=user_details,
+        current_user=current_user,
     )
     return user
 

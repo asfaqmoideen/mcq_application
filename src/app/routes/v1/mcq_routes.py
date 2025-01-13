@@ -17,10 +17,10 @@ from app.services import (
     user_services,
 )
 
-router = APIRouter(prefix="/quizify/mcqs", tags=["User Routes for MCQ app"])
+router = APIRouter(tags=["User Routes for MCQ app"])
 
 
-@router.get("/types", response_model=List[str])
+@router.get("/mcq/types", response_model=List[str])
 def get_mcq_types(current_user: UserOutput = Depends(user_services.get_current_user)):
     """
     Endpoint to fetch distinct MCQ types.
@@ -29,7 +29,7 @@ def get_mcq_types(current_user: UserOutput = Depends(user_services.get_current_u
     return mcq_services.fetch_mcq_types(unit_of_work=unit_of_work)
 
 
-@router.get("/", response_model=PaginatedResponse)
+@router.get("/mcqs/", response_model=PaginatedResponse)
 async def get_random_mcqs(
     type: str = Query(..., description="MCQ type to filter by"),
     page_size: int = Query(10, le=100, description="Number of MCQs to return"),
@@ -53,7 +53,7 @@ async def get_random_mcqs(
     return mcqs
 
 
-@router.post("/submit", response_model=SubmissionOutput)
+@router.post("/mcqs/submit", response_model=SubmissionOutput)
 def submit_answers(
     submission: SubmissionInput,
     current_user: UserOutput = Depends(user_services.get_current_user),
@@ -68,7 +68,7 @@ def submit_answers(
     return result
 
 
-@router.post("/history", response_model=List[UserHistoryInput])
+@router.post("/mcqs/history", response_model=List[UserHistoryInput])
 def user_submission_history(
     current_user: UserOutput = Depends(user_services.get_current_user),
 ):

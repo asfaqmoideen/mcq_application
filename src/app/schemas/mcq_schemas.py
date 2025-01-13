@@ -31,6 +31,13 @@ class UserRegisterInput(BaseModel):
     password: str
 
 
+class UserCreate(BaseModel):
+    username: str
+    email: EmailStr
+    password: str
+    role: UserRole
+
+
 class UserRegisterOutput(BaseModel):
     user_id: UUID4
 

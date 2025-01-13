@@ -11,6 +11,7 @@ from passlib.context import CryptContext
 from app.config.settings import app_config
 from app.models.data_models import User
 from app.schemas.mcq_schemas import (
+    UserCreate,
     UserLoginInput,
     UserLoginOutput,
     UserOutput,
@@ -140,6 +141,37 @@ def update(
     with unit_of_work:
         updated_user = unit_of_work.user.get(user_id=user_id)
         return UserUpdateOutput(**model_to_dict(updated_user))
+
+
+def add_user(user: UserCreate, current_user: UserOutput, unit_of_work: BaseUnitOfWork):
+    """
+    adds user
+
+    Parameters
+    ----------
+        user: UserCreate (User Object)
+        unit_of_work: BaseUnitOfWork
+
+    Returns
+        user_id :  uuid of newly created user
+    -------
+
+    """
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=401, detail="Access denied. Admin role required."
+        )
+    with unit_of_work:
+        try:
+            user.password = get_password_hash(user.password)
+            new_user = User(**user.model_dump())
+            unit_of_work.user.add(user=new_user)
+            unit_of_work.session.flush()
+            unit_of_work.session.refresh(new_user)
+            return {"user_id": str(new_user.user_id)}
+        except ValueError as ve:
+            unit_of_work.rollback()
+            raise HTTPException(status_code=400, detail=str(ve))
 
 
 def delete(user_id: UUID, unit_of_work: BaseUnitOfWork, current_user: UserOutput):

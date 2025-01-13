@@ -10,7 +10,7 @@ from app.schemas.mcq_schemas import (
 )
 from app.services import UserUnitOfWork, user_services
 
-router = APIRouter(prefix="/quizify/auth", tags=["Authentication"])
+router = APIRouter(prefix="/auth", tags=["Authentication"])
 authorization_header_scheme = HTTPBearer()
 
 
