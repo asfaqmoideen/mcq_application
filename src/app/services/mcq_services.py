@@ -6,7 +6,7 @@ from uuid import UUID
 import pandas as pd
 from fastapi import HTTPException, UploadFile
 
-from app.models.data_models import MCQ, UserHistory
+from app.models.data_models import MCQ, UserHistory, UserHistoryDetail
 from app.schemas.mcq_schemas import (
     AttemptedMcqWithAnswer,
     MCQCreate,
@@ -45,7 +45,7 @@ def add_mcq(
     unit_of_work: BaseUnitOfWork, mcq: MCQCreate, current_user: UserOutput
 ) -> MCQCreateOutput:
     """
-    Adds a new MCQ to the database. Only user with role as "admin" can create the mcq.
+    Adds a new MCQ to the database. Only users with the role of "admin" can create the MCQ.
 
     Args:
         unit_of_work (BaseUnitOfWork): The unit of work object that manages database transactions and repositories.
@@ -64,14 +64,22 @@ def add_mcq(
             status_code=401, detail="Access denied. Admin role required."
         )
     with unit_of_work:
-        mcq_data = mcq.model_dump()
-        mcq = MCQ(**mcq_data)
         existing_types = fetch_mcq_types(unit_of_work=unit_of_work)
         if mcq.type not in existing_types:
-            raise HTTPException(status_code=400, detail="Invalid mcq type input.")
+            raise HTTPException(status_code=400, detail="Invalid MCQ type input.")
+
+        duplicate_mcq = (
+            unit_of_work.session.query(MCQ).filter_by(question=mcq.question).first()
+        )
+        if duplicate_mcq:
+            raise HTTPException(status_code=400, detail="Duplicate question found.")
+
+        mcq_data = mcq.model_dump()
+        mcq = MCQ(**mcq_data)
         unit_of_work.session.add(mcq)
         unit_of_work.session.flush()
         unit_of_work.session.refresh(mcq)
+
         return MCQCreateOutput(**mcq.__dict__)
 
 
@@ -260,7 +268,13 @@ def process_submission(
     submission_details = []
 
     with unit_of_work as uow:
-        details_list = []
+        user_history = UserHistory(
+            user_id=user_id,
+            total_score=0,
+            percentage=0,
+            total_attempts=total_questions,
+        )
+
         for attempted_mcq in submission.attempted:
             mcq = uow.mcq.get(mcq_id=attempted_mcq.mcq_id)
             if not mcq:
@@ -270,39 +284,32 @@ def process_submission(
             is_correct = attempted_mcq.user_answer.value == mcq.correct_option
             total_score += 1 if is_correct else 0
 
-            details_dict = {
-                "mcq_id": str(mcq.mcq_id),
-                "type": mcq.type,
-                "question": mcq.question,
-                "options": mcq.options,
-                "correct_option": mcq.correct_option,
-                "user_answer": attempted_mcq.user_answer.value,
-                "is_correct": is_correct,
-            }
-            details_list.append(details_dict)
+            detail = UserHistoryDetail(
+                history_id=user_history.history_id,
+                mcq_id=mcq.mcq_id,
+                user_answer=attempted_mcq.user_answer.value,
+                is_correct=is_correct,
+            )
+            user_history.details.append(detail)
 
-        mcq_dict = {
-            "mcq_id": mcq.mcq_id,
-            "type": mcq.type,
-            "question": mcq.question,
-            "options": mcq.options,
-            "correct_option": mcq.correct_option,
-            "user_answer": attempted_mcq.user_answer.value,
-        }
-
-        submission_details.append(AttemptedMcqWithAnswer(**mcq_dict))
+            submission_details.append(
+                AttemptedMcqWithAnswer(
+                    mcq_id=mcq.mcq_id,
+                    type=mcq.type,
+                    question=mcq.question,
+                    options=mcq.options,
+                    correct_option=mcq.correct_option,
+                    user_answer=attempted_mcq.user_answer.value,
+                )
+            )
 
         percentage = (
             (total_score / total_questions) * 100 if total_questions != 0 else 0
         )
 
-        user_history = UserHistory(
-            user_id=user_id,
-            total_score=total_score,
-            percentage=percentage,
-            total_attempts=total_questions,
-            details=details_list,
-        )
+        user_history.total_score = total_score
+        user_history.percentage = percentage
+
         uow.history.add(user_history)
 
         return SubmissionOutput(
@@ -346,10 +353,27 @@ def view_particular_history(
     with unit_of_work as uow:
         history = uow.history.get(history_id=history_id)
         history_dict = history.__dict__
-        print(history_dict)
+
+        details = uow.history_details.get_all(history_id=history_id)
+
+        details_list = []
+        for detail in details:
+            mcq = uow.mcq.get(mcq_id=detail.mcq_id)
+            details_list.append(
+                {
+                    "mcq_id": str(detail.mcq_id),
+                    "type": mcq.type,
+                    "question": mcq.question,
+                    "options": mcq.options,
+                    "correct_option": mcq.correct_option,
+                    "user_answer": detail.user_answer,
+                    "is_correct": detail.is_correct,
+                }
+            )
+
         return SubmissionOutput(
             user_id=history_dict.get("user_id"),
-            data=history_dict.get("details"),
+            data=details_list,
             total_score=history_dict.get("total_score"),
             total_attempts=history_dict.get("total_attempts"),
             percentage=history_dict.get("percentage"),

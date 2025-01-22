@@ -4,6 +4,7 @@ from uuid import uuid4
 from sqlalchemy import (
     JSON,
     TIMESTAMP,
+    Boolean,
     Column,
     Enum,
     Float,
@@ -49,10 +50,25 @@ class UserHistory(Base):
     total_score = Column(Float, nullable=False)
     percentage = Column(Float, nullable=False)
     total_attempts = Column(Integer, nullable=False)
-    details = Column(JSON, nullable=False)
     attempted_at = Column(TIMESTAMP, server_default=func.current_timestamp())
 
     user = relationship("User", back_populates="history")
+    details = relationship(
+        "UserHistoryDetail", back_populates="user_history", cascade="all, delete-orphan"
+    )
+
+
+class UserHistoryDetail(Base):
+    __tablename__ = "user_history_details"
+
+    detail_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    history_id = Column(UUID, ForeignKey("user_history.history_id"), nullable=False)
+    mcq_id = Column(UUID, ForeignKey("mcqs.mcq_id"), nullable=False)
+    user_answer = Column(String, nullable=False)
+    is_correct = Column(Boolean, nullable=False)
+
+    user_history = relationship("UserHistory", back_populates="details")
+    mcq = relationship("MCQ")
 
 
 class MCQ(Base):

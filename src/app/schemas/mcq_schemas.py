@@ -246,6 +246,23 @@ class SubmissionOutput(BaseModel):
         }
 
 
+class HistoryDetailsInput(BaseModel):
+    history_id: UUID4
+    mcq_id: UUID4
+    user_answer: OptionEnum
+    is_correct: bool
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "history_id": "53cbd4eb-740f-4bbe-8e85-02db29d4218b",
+                "mcq_id": "341458b1-87b5-440b-8324-8f013b353ade",
+                "user_answer": "a",
+                "is_correct": "true",
+            }
+        }
+
+
 class UserHistoryInput(BaseModel):
     history_id: UUID4
     user_id: UUID4

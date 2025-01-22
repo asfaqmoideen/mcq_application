@@ -1,6 +1,7 @@
 from abc import ABC
 
 from app.config.database import get_db
+from app.repositories.history_details_repository import HistoryDetailsRepository
 from app.repositories.history_repository import HistoryRepository
 from app.repositories.mcq_repository import McqRepository
 from app.repositories.user_repository import UserRepository
@@ -41,6 +42,7 @@ class SubmissionUnitOfWork(BaseUnitOfWork):
         super().__enter__()
         self.mcq = McqRepository(self.session)
         self.history = HistoryRepository(self.session)
+        self.history_details = HistoryDetailsRepository(self.session)
         return self
 
 

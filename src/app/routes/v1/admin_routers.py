@@ -4,14 +4,19 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, UploadFile
 
 from app.schemas.mcq_schemas import (
-    MCQ,
     MCQCreate,
     UserCreate,
     UserOutput,
     UserUpdate,
     UserUpdateOutput,
 )
-from app.services import McqUnitOfWork, UserUnitOfWork, mcq_services, user_services
+from app.services import (
+    McqUnitOfWork,
+    UserUnitOfWork,
+    aws_services,
+    mcq_services,
+    user_services,
+)
 
 router = APIRouter(tags=["Admin Routes"])
 
@@ -129,7 +134,17 @@ def create_mcq(
     Endpoint to create a new MCQ.
     """
     unit_of_work = McqUnitOfWork()
-    mcq_data = MCQ(**mcq_data.model_dump(), created_by=current_user.user_id)
     return mcq_services.add_mcq(
         mcq=mcq_data, unit_of_work=unit_of_work, current_user=current_user
     )
+
+
+@router.post("/upload-template", status_code=201)
+def upload_template(
+    file: UploadFile = File(...),
+    current_user: UserOutput = Depends(user_services.get_current_user),
+):
+    """
+    Upload a .docx file to S3 as a template for certificate generation
+    """
+    return aws_services.upload_template(file=file, current_user=current_user)
