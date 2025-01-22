@@ -109,10 +109,15 @@ def bulk_upload_mcqs(
         dict: Response message with the count of MCQs successfully added.
     """
     unit_of_work = McqUnitOfWork()
-    mcq_count = mcq_services.bulk_add_mcqs(
+    added_count, skipped_count = mcq_services.bulk_add_mcqs(
         unit_of_work=unit_of_work, file=file, current_user=current_user
     )
-    return {"message": f"{mcq_count} MCQs successfully added."}
+    if skipped_count:
+        return {
+            "message": f"{added_count} unique MCQs added and {skipped_count} duplicate MCQs skipped."
+        }
+    else:
+        return {"message": f"{added_count} unique MCQs added."}
 
 
 @router.post("/mcq", status_code=201)

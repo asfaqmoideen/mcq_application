@@ -305,7 +305,7 @@ def get_current_user(
             algorithms=app_config["ALGORITHM"],
         )
     except ExpiredSignatureError:
-        raise HTTPException(status_code=400, detail="Access Token Has Expired")
+        raise HTTPException(status_code=403, detail="Access Token Has Expired")
     except JWTError:
         raise HTTPException(status_code=500, detail="Invalid Token")
 

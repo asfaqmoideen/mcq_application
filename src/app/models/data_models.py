@@ -4,7 +4,6 @@ from uuid import uuid4
 from sqlalchemy import (
     JSON,
     TIMESTAMP,
-    Boolean,
     Column,
     Enum,
     Float,
@@ -37,26 +36,9 @@ class User(Base):
     created_mcqs = relationship(
         "MCQ", back_populates="creator", cascade="all, delete-orphan"
     )
-    submissions = relationship(
-        "UserSubmission", back_populates="user", cascade="all, delete-orphan"
-    )
     history = relationship(
         "UserHistory", back_populates="user", cascade="all, delete-orphan"
     )
-
-
-class UserSubmission(Base):
-    __tablename__ = "user_submissions"
-
-    submission_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    user_id = Column(UUID, ForeignKey("users.user_id"), nullable=False)
-    mcq_id = Column(UUID, ForeignKey("mcqs.mcq_id"), nullable=False)
-    user_answer = Column(String, nullable=False)
-    is_correct = Column(Boolean, default=False)
-    attempted_at = Column(TIMESTAMP, server_default=func.current_timestamp())
-
-    user = relationship("User", back_populates="submissions")
-    mcq = relationship("MCQ", back_populates="submissions")
 
 
 class UserHistory(Base):
@@ -67,6 +49,7 @@ class UserHistory(Base):
     total_score = Column(Float, nullable=False)
     percentage = Column(Float, nullable=False)
     total_attempts = Column(Integer, nullable=False)
+    details = Column(JSON, nullable=False)
     attempted_at = Column(TIMESTAMP, server_default=func.current_timestamp())
 
     user = relationship("User", back_populates="history")
@@ -77,13 +60,10 @@ class MCQ(Base):
 
     mcq_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     type = Column(String, nullable=False)
-    question = Column(String, nullable=False)
+    question = Column(String, nullable=False, unique=True)
     options = Column(JSON, nullable=False)
     correct_option = Column(String, nullable=False)
     created_by = Column(UUID, ForeignKey("users.user_id"), nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.current_timestamp())
 
     creator = relationship("User", back_populates="created_mcqs")
-    submissions = relationship(
-        "UserSubmission", back_populates="mcq", cascade="all, delete-orphan"
-    )

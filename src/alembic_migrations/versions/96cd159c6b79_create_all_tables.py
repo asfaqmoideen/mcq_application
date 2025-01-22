@@ -21,8 +21,6 @@ userrole = postgresql.ENUM("admin", "user", name="userrole")
 
 
 def upgrade():
-    # userrole.create(op.get_bind(), checkfirst=True)
-
     op.create_table(
         "users",
         sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
@@ -56,23 +54,7 @@ def upgrade():
         ),
         sa.PrimaryKeyConstraint("mcq_id"),
         sa.ForeignKeyConstraint(["created_by"], ["users.user_id"]),
-    )
-
-    op.create_table(
-        "user_submissions",
-        sa.Column("submission_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("mcq_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("user_answer", sa.String(), nullable=False),
-        sa.Column(
-            "is_correct", sa.Boolean(), nullable=False, server_default=sa.text("false")
-        ),
-        sa.Column(
-            "attempted_at", sa.TIMESTAMP(), server_default=sa.func.current_timestamp()
-        ),
-        sa.PrimaryKeyConstraint("submission_id"),
-        sa.ForeignKeyConstraint(["user_id"], ["users.user_id"]),
-        sa.ForeignKeyConstraint(["mcq_id"], ["mcqs.mcq_id"]),
+        sa.UniqueConstraint("question"),
     )
 
     op.create_table(
@@ -82,6 +64,7 @@ def upgrade():
         sa.Column("total_score", sa.Float(), nullable=False),
         sa.Column("percentage", sa.Float(), nullable=False),
         sa.Column("total_attempts", sa.Integer(), nullable=False),
+        sa.Column("details", sa.JSON(), nullable=True),
         sa.Column(
             "attempted_at", sa.TIMESTAMP(), server_default=sa.func.current_timestamp()
         ),
@@ -94,6 +77,5 @@ def downgrade():
     userrole.drop(op.get_bind(), checkfirst=True)
     op.drop_table("mcqs")
     op.drop_table("user_history")
-    op.drop_table("user_submissions")
     op.drop_table("users")
     op.execute("DROP TYPE userrole")

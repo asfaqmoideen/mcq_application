@@ -32,7 +32,7 @@ class HistoryRepository(BaseRepository[UserHistory]):
         submission = (
             self.session.query(UserHistory)
             .filter(UserHistory.history_id == history_id)
-            .all()
+            .first()
         )
         return submission
 
