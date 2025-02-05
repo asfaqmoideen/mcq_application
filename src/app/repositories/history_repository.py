@@ -1,6 +1,7 @@
 from typing import List
 from uuid import UUID
 
+from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from app.models.data_models import UserHistory
@@ -36,7 +37,12 @@ class HistoryRepository(BaseRepository[UserHistory]):
         )
         return submission
 
-    def get_all(self, user_id) -> List[UserHistory]:
+    def get_all(
+        self,
+        user_id,
+        sort_by: str = None,
+        order: str = "asc",
+    ) -> List[UserHistory]:
         """
         Retrieve all History from the database.
 
@@ -47,6 +53,13 @@ class HistoryRepository(BaseRepository[UserHistory]):
 
         if user_id:
             query = query.filter(UserHistory.user_id == user_id)
+
+        if sort_by:
+            if hasattr(UserHistory, sort_by):
+                column = getattr(UserHistory, sort_by)
+                query = query.order_by(
+                    desc(column) if order.lower() == "desc" else column
+                )
 
         return query.all()
 

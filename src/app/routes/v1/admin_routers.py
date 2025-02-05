@@ -145,6 +145,6 @@ def upload_template(
     current_user: UserOutput = Depends(user_services.get_current_user),
 ):
     """
-    Upload a .docx file to S3 as a template for certificate generation
+    Upload a .jpg file to S3 as a template for certificate generation
     """
     return aws_services.upload_template(file=file, current_user=current_user)

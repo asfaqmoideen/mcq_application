@@ -31,10 +31,10 @@ def get_mcq_types(current_user: UserOutput = Depends(user_services.get_current_u
     return mcq_services.fetch_mcq_types(unit_of_work=unit_of_work)
 
 
-@router.get("/mcqs/", response_model=PaginatedResponse)
+@router.get("/mcq/", response_model=PaginatedResponse)
 async def get_random_mcqs(
     type: str = Query(..., description="MCQ type to filter by"),
-    page_size: int = Query(10, le=100, description="Number of MCQs to return"),
+    page_size: int = Query(10, le=100, description="Number of MCQs to attempt"),
     page: int = Query(1, ge=1, description="Page number for pagination"),
     current_user: UserOutput = Depends(user_services.get_current_user),
 ):
@@ -50,12 +50,16 @@ async def get_random_mcqs(
     """
     unit_of_work = McqUnitOfWork()
     mcqs = mcq_services.get_all(
-        unit_of_work=unit_of_work, type=type, page_size=page_size, page=page
+        unit_of_work=unit_of_work,
+        type=type,
+        page_size=page_size,
+        page=page,
+        current_user=current_user,
     )
     return mcqs
 
 
-@router.post("/mcqs/submit", response_model=SubmissionOutput)
+@router.post("/mcq/submit", response_model=SubmissionOutput)
 def submit_answers(
     submission: SubmissionInput,
     current_user: UserOutput = Depends(user_services.get_current_user),
@@ -70,8 +74,24 @@ def submit_answers(
     return result
 
 
-@router.get("/mcqs/history", response_model=List[UserHistoryInput])
+@router.post("/certificates/create")
+def generate_certificate(
+    current_user: UserOutput = Depends(user_services.get_current_user),
+):
+    """
+    Endpoint to generate a certificate for a user based on their last MCQ submission.
+    """
+    unit_of_work = SubmissionUnitOfWork()
+    result = mcq_services.create_certificate(
+        unit_of_work=unit_of_work, current_user=current_user
+    )
+    return result
+
+
+@router.get("/mcq/history", response_model=List[UserHistoryInput])
 def user_submission_history(
+    sort_by: str = Query(None, description="History to sort by"),
+    order: str = Query("asc", description="sort order (asc/desc)"),
     current_user: UserOutput = Depends(user_services.get_current_user),
 ):
     """
@@ -79,12 +99,15 @@ def user_submission_history(
     """
     unit_of_work = HistoryUnitOfWork()
     result = mcq_services.view_history_of_submission_of_user(
-        unit_of_work=unit_of_work, current_user=current_user
+        unit_of_work=unit_of_work,
+        current_user=current_user,
+        sort_by=sort_by,
+        order=order,
     )
     return result
 
 
-@router.get("/mcqs/history/{history_id}", response_model=SubmissionOutput)
+@router.get("/mcq/history/{history_id}", response_model=SubmissionOutput)
 def user_submission_history_by_id(
     history_id: UUID,
     current_user: UserOutput = Depends(user_services.get_current_user),
