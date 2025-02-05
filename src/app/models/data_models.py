@@ -57,6 +57,7 @@ class UserHistory(Base):
     submission_id = Column(
         UUID, ForeignKey("submissions.submission_id"), nullable=False
     )
+    certificate = Column(String, nullable=False)
 
     user = relationship("User", back_populates="history")
     details = relationship(

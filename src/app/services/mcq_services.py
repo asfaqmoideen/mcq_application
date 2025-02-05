@@ -19,7 +19,7 @@ from app.schemas.mcq_schemas import (
     UserHistoryInput,
     UserOutput,
 )
-from app.services.aws_services import generate_certificate
+from app.services.aws_services import generate_certificate, generate_presigned_url
 from app.services.unit_of_work import (
     BaseUnitOfWork,
     HistoryUnitOfWork,
@@ -319,9 +319,18 @@ def process_submission(
             (total_score / total_questions) * 100 if total_questions != 0 else 0
         )
 
+        data = {
+            "name": current_user.username,
+            "type": mcq.type,
+            "percentage": percentage,
+        }
+        generated_certificate_name = (
+            generate_certificate(data=data).get("body").get("object_name")
+        )
+
         user_history.total_score = total_score
         user_history.percentage = percentage
-
+        user_history.certificate = generated_certificate_name
         uow.history.add(user_history)
 
         return SubmissionOutput(
@@ -421,3 +430,20 @@ def create_certificate(unit_of_work: SubmissionUnitOfWork, current_user: UserOut
     }
 
     return generate_certificate(data=data)
+
+
+def generate_certificate_presigned_url(
+    unit_of_work: HistoryUnitOfWork,
+    current_user: UserOutput,
+    history_id: UUID,
+):
+    """
+    generates a presigned link of existing certificate
+    """
+    with unit_of_work as uow:
+        history = uow.history.get(history_id=history_id)
+        certificate = history.certificate
+        if certificate:
+            return generate_presigned_url(file_key=certificate)
+        else:
+            raise HTTPException(status_code=404, detail="Certtificate not found.")

@@ -71,6 +71,7 @@ def submit_answers(
     result = mcq_services.process_submission(
         submission=submission, unit_of_work=unit_of_work, current_user=current_user
     )
+
     return result
 
 
@@ -117,6 +118,21 @@ def user_submission_history_by_id(
     """
     unit_of_work = SubmissionUnitOfWork()
     result = mcq_services.view_particular_history(
+        unit_of_work=unit_of_work, current_user=current_user, history_id=history_id
+    )
+    return result
+
+
+@router.get("/mcq/history/{history_id}/certificate")
+def fetch_certificate(
+    history_id: UUID,
+    current_user: UserOutput = Depends(user_services.get_current_user),
+):
+    """
+    Endpoint to fetch particular submission certificate
+    """
+    unit_of_work = HistoryUnitOfWork()
+    result = mcq_services.generate_certificate_presigned_url(
         unit_of_work=unit_of_work, current_user=current_user, history_id=history_id
     )
     return result
